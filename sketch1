@@ -1,0 +1,142 @@
+#include <Arduino.h>
+
+int DirVel = 4 ;//Velocidade do motor direito
+int EsqVel = 5 ;//Velociadde do motor esquerdo
+int DirCont = 6 ;//Controle direito
+int EsqCont = 7 ;//Controle esquerdo
+int s1 = A0;
+int s2 = A1;
+int s3 = A2;
+int s4 = A3;
+int s5 = A4;
+int s6 = A5;
+int s7 = 8;
+int s8 = 9;
+
+int valors1 = 0;
+int valors2 = 0;
+int valors3 = 0;
+int valors4 = 0;
+int valors5 = 0;
+int valors6 = 0;
+int valors7 = 0;
+int valors8 = 0;
+
+
+
+int ValorCorte = 100;
+
+
+void timers (void);
+
+void setup (void)
+{
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+  pinMode(A0,INPUT);      //
+  pinMode(A1,INPUT);
+  pinMode(A2,INPUT);
+  pinMode(A3,INPUT);      //input do sesor de 8 canais
+  pinMode(A4,INPUT);
+  pinMode(A5,INPUT);
+  pinMode(8,INPUT);
+  pinMode(9,INPUT);       //
+}
+
+/*void loop (void)
+{
+  frente = 
+  analogWrite(DirVel, 100); //velocidade mínima do motor equivale a 0
+  analogWrite(EsqVel, 100); //velociade máxima do motor equivale a 255
+  digitalWrite(DirCont, LOW); //motor girando no sentido antihorário
+  digitalWrite(EsqCont, LOW); //motor girando no sentido antihorário
+
+  trás = 
+  analogWrite(DirVel, 100); //velocidade mínima do motor equivale a 0
+  analogWrite(EsqVel, 100); //velociade máxima do motor equivale a 255
+  digitalWrite(DirCont, HIGH); //motor girando no sentido horário
+  digitalWrite(EsqCont, HIGH); //motor girando no sentido horário
+
+  curva_direita = 
+  analogWrite(DirVel, 100); 
+  analogWrite(EsqVel, 100); 
+  digitalWrite(DirCont, HIGH); 
+  digitalWrite(EsqCont, LOW);
+
+  curva_esquerda = 
+  analogWrite(DireVel, 100);
+  analogWrite(EsqVel, 100);
+  digitalWrite(DirCont, LOW);
+  gigitalWrite(EsqCont, HIGH);
+
+
+}
+
+*/
+
+void timers1 (void)
+{
+  static unsigned char contador1 = 0 ;
+  if (contador1<3)
+  {
+    contador1++;
+  }
+  
+  if (contador1>3)
+  {
+    contador1 = 0;
+  }
+}
+
+void sensores (void)
+{
+  s1 = digitalRead(A0);
+  s2 = digitalRead(A1);
+  s3 = digitalRead(A2);
+  s4 = digitalRead(A3);
+  s5 = digitalRead(A4);
+  s6 = digitalRead(A5);
+  s7 = digitalRead(7);
+  s8 = digitalRead(8);
+  
+  if (s1 == true && s8 == true) //Linha branca em pista preta
+  {
+
+  }
+;
+}
+
+
+/*Protótipo do código que será utilizado para 
+mandar informações do módulo bluetooth HC-05 
+até um aplicativo de celular*/
+void bluethooth (void)
+{
+/* while (Serial.)
+{
+  timers1();
+  char c = Serial.read();
+  readString += c; 
+}
+*/
+} 
+//////////////////////////////////////////////////
+
+void Walk (void)
+{
+  valors1 = analogRead(A0);
+  valors2 = analogRead(A1);
+  valors3 = analogRead(A2);
+  valors4 = analogRead(A3);
+  valors5 = analogRead(A4);
+  valors6 = analogRead(A5);
+  valors7 = analogRead(8);
+  valors8 = analogRead(9);
+
+  if(valors1 > 100 && valors7 < 100)
+  {
+
+  }
+}
