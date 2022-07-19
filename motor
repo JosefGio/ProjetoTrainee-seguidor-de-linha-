@@ -1,0 +1,48 @@
+#define DirVel = 4 ;//Velocidade do motor direito
+#define EsqVel = 5 ;//Velociadde do motor esquerdo
+#define DirCont = 6 ;//Controle direito
+#define EsqCont = 7 ;//Controle esquerdo
+
+int PotPrim 210 ; //Potência do motor principal da curva
+int PotSec 6 ; //Potênica do motor secundário durante a curva
+int PotFrente 110 ; //Potência quando o robô estiver seguindo em frente
+
+void setup (void)
+{
+  pinMode(4 ,OUTPUT);
+  pinMode(5 ,OUTPUT);
+  pinMode(6 ,OUTPUT);
+  pinMode(7 ,OUTPUT);
+}
+
+void loop (void)
+{
+  frente = 
+  analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
+  analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
+  digitalWrite(DirCont, LOW); //motor girando no sentido antihorário
+  digitalWrite(EsqCont, LOW); //motor girando no sentido antihorário
+  delay (500)
+
+  trás = 
+  analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
+  analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
+  digitalWrite(DirCont, HIGH); //motor girando no sentido horário
+  digitalWrite(EsqCont, HIGH); //motor girando no sentido horário
+  delay (500)
+
+  curva_direita = 
+  analogWrite(DirVel, 100); 
+  analogWrite(EsqVel, 100); 
+  digitalWrite(DirCont, HIGH); 
+  digitalWrite(EsqCont, LOW);
+  delay(500)
+
+  curva_esquerda = 
+  analogWrite(DireVel, 100);
+  analogWrite(EsqVel, 100);
+  digitalWrite(DirCont, LOW);
+  gigitalWrite(EsqCont, HIGH);
+  delay(500)
+
+}
