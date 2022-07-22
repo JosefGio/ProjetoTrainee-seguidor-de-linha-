@@ -1,26 +1,27 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
+#include "time.h"
 
 
 String readString; //string necessária para ler as informações no app pelo celular
 
 
-#define DirVel = 4 ;//Velocidade do motor direito
-#define EsqVel = 5 ; //Velocidade do motoe esquerdo
-#define DirCont = 6 ;//Controle direito
-#define EsqCont = 7 ;//Controle esquerdo
+int DirVel = 4 ;//Velocidade do motor direito
+int EsqVel = 5 ; //Velocidade do motoe esquerdo
+int DirCont = 6 ;//Controle direito
+int EsqCont = 7; //Controle esquerdo
 
-int PotPrim 210; //Potência do motor principal da curva
-int PotSec 6; //Potênica do motor secundário durante a curva
-int PotFrente 110; //Potência quando o robô estiver seguindo em frente
+int PotPrim = 60; //Potência do motor principal da curva
+int PotSec = 6; //Potênica do motor secundário durante a curva
+int PotFrente = 50; //Potência quando o robô estiver seguindo em frente
 
 //Sensores//
-#define s2 = A0;
-#define s3 = A1;
-#define s4 = A2;
-#define s5 = A3;
-#define s6 = A4;
-#define s7 = A5;
+int s2 = A0;
+int s3 = A1;
+int s4 = A2;
+int s5 = A3;
+int s6 = A4;
+int s7 = A5;
 
 //Valor dos Sensores//
 int valors2 = 0;
@@ -30,39 +31,61 @@ int valors5 = 0;
 int valors6 = 0;
 int valors7 = 0;
 
+//Variáveis Bluetooth
+int state = 0 ;   
+int flagON = 0;
+int FlagOFF = 0;
+
 //PID
 int Kp = 0; //constante de Proporcionalidade
 int Ki = 0; //constante de Integralidade
 int Kd = 0; //constante de Diferencial
 int P = 0, I = 0, D = 0, PID = 0;
+int erro = 0, erro_anterior = 0;
 
-int erro = 0;
+unsigned int MaxTimer1 ;
 
-//Serial.begin (9600)
-//Serial2.begin (9600)
+int linha = 650; //valor de referência que indica que o sensor está seguindo a linha
 
-int linha = 100; //valor de referência que indica que o sensor está seguindo a linha
+void rotina(void); 
 
 
-void timers (void);
+//SoftwareSerial(0 , 1) //entradas RX e TX
+
+int main ()
+{
+  TCCR0B = 0x03;  //defino o prescaler em 64
+  TCNT0 = 6;  //começa em 6 e vai até 255 gerando um tempo de 1ms
+  TIMSK0 = 0x01;  //habilito a interrupção do timer0
+  sei();  //habilita a chave geral das interrupções
+  MaxTimer1 = 500;
+
+}
 
 void setup (void)
 {
+
+  //Motores
   pinMode(4 ,OUTPUT);
-  pinMode(5 ,OUTPUT);
+  pinMode(5 ,OUTPUT);        // DDRB = 0b11110000
   pinMode(6 ,OUTPUT);
   pinMode(7 ,OUTPUT);
 
+
+  //Sensores
   pinMode(A0 ,INPUT);      //
   pinMode(A1 ,INPUT);
   pinMode(A2 ,INPUT);
   pinMode(A3 ,INPUT);      //input dos 6 sensores frontais 
   pinMode(A4 ,INPUT);
   pinMode(A5 ,INPUT);      //
+
+   Serial.begin(9600);   // Serial para Monitor Arduino para debug
 }
 
-/*void loop (void)
+void loop (void)
 {
+ /*
   frente = 
   analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
   analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
@@ -87,35 +110,42 @@ void setup (void)
   digitalWrite(DirCont, LOW);
   gigitalWrite(EsqCont, HIGH);
 
-
+ */
 }
 
-*/
+
+
+ISR(TIMER0_OVF_vect)
+{
+    TCNT0 = 6;
+    timers1();
+}
 
 void timers1 (void)
 {
   static unsigned char contador1 = 0 ;
-  if (contador1 < 3)
+  if (contador1 < 500)
   {
     contador1++;
   }
   
-  if (contador1 > 3)
+  if (contador1 > 500)
   {
+    rotina();
     contador1 = 0;
   }
 }
 
 void sensores (void)
 {
-  analogWrite(s2 , A0);
-  analogWrite(s3 , A1);
-  analogWrite(s4 , A2);
-  analogWrite(s5 , A3);
-  analogWrite(s6 , A4);
-  analogWrite(s7 , A5);
+  analogWrite (A0, 0);
+  analogWrite (A1, 0);
+  analogWrite (A3, 0);
+  analogWrite (A4, 0);
+  analogWrite (A5, 0);
+  analogWrite (A6, 0);
  
-  if (s2 == true && s7 == true) //Linha branca em pista preta
+  if (s2 == 1 && s7 == 1) //Linha branca em pista preta
   {
 
   }
@@ -123,51 +153,52 @@ void sensores (void)
 
 void calculo_erro (void)
 {
-  if ((s2 == 1) && (s3 == 1) && (s4 == 0) && (s5 == 1) && (s6 == 1) )
+  if ((s2 >= linha) && (s3 >= linha) && (s4 <= linha) && (s5 >= linha) && (s6 >= linha) )
   {
-    erro 0;
+    erro = 0;
   } //(s7 = 1))
-  else if ((s2 == 1) && (s3 == 0) && (s4 == 0) && (s5 == 1) && (s6 == 1) )
+  else if ((s2 >= linha) && (s3 <= linha) && (s4 <= linha) && (s5 >= linha) && (s6 >= linha) )
   {
-    erro 1;
+    erro = 1;
   } //(s7 = 1))
-  else if ((s2 == 1) && (s3 == 1) && (s4 == 0) && (s5 == 0) && (s6 == 1) )
+  else if ((s2 >= linha) && (s3 >= linha) && (s4 <= linha) && (s5 <= linha) && (s6 >= linha) )
   {
-    erro -1;
+    erro = -1;
   } //(s7 = 1))
-  else if ((s2 == 1) && (s3 == 1) && (s4 == 1) && (s5 == 0) && (s6 == 1) )
+  else if ((s2 >= linha) && (s3 >= linha) && (s4 >= linha) && (s5 <= linha) && (s6 >= linha) )
   {
-    erro 1.5;
+    erro = 1.5;
   } //(s7 = 1))
-  else if ((s2 = 1) && (s3 = 0) && (s4 = 1) && (s5 = 1) && (s6 = 1) )
+  else if ((s2 >= linha) && (s3 <= linha) && (s4 >= linha) && (s5 >= linha) && (s6 >= linha) )
   {
-    erro -1.5;
+    erro = -1.5;
   } //(s7 = 1))
-  else if ((s2 = 1) && (s3 = 1) && (s4 = 1) && (s5 = 0) && (s6 = 0) )
+  else if ((s2 >= linha) && (s3 >= linha) && (s4 >= linha) && (s5 <= linha) && (s6 <= linha) )
   {
-    erro 1.75;
+    erro = 1.75;
   } //(s7 = 1))
-  else if ((s2 = 0) && (s3 = 0) && (s4 = 1) && (s5 = 1) && (s6 = 1) )
+  else if ((s2 <= linha) && (s3 <= linha) && (s4 >= linha) && (s5 >= linha) && (s6 >= linha) )
   {
-    erro -1.75;
+    erro = -1.75;
   } //(s7 = 1))
-  else if ((s2 = 1) && (s3 = 1) && (s4 = 1) && (s5 = 1) && (s6 = 0) )
+  else if ((s2 >= linha) && (s3 >= linha) && (s4 >= linha) && (s5 >= linha) && (s6 <= linha) )
   {
-    erro 2;
+    erro = 2;
   } //(s7 = 1))
-  else if ((s2 = 0) && (s3 = 1) && (s4 = 1) && (s5 = 1) && (s6 = 1) )
+  else if ((s2 <= linha) && (s3 >= linha) && (s4 >= linha) && (s5 >= linha) && (s6 >= linha) )
   {
-    erro -2;
+    erro = -2;
   } //(s7 = 1))
 }
-void PID (void)
+void calculoPID (void)
 {
   if (erro == 0)
   {
     I = 0;
   }
   P = erro;
-  I = I + erro
+  I = I + erro;
+
   if (I > 255)
   {
     I = 255;
@@ -176,21 +207,21 @@ void PID (void)
   {
     I = -255;
   }
-  D = erro - erro_anterior
-  PID = (Kp * P)(Ki * I)(Kd * D)
+  D = erro - erro_anterior;
+  PID = (Kp * P) + (Ki * I) + (Kd * D);
 }
 
 void controle_motor (void)
 {
   if (PID >= 0)
   {
-    EsqVel = PotPrim
-    DirVel = PotPrim - PID
+    EsqVel = PotPrim;
+    DirVel = PotPrim - PID;
   }
   else
   {
-    EsqVel = PotPrim + PID
-    DirVel = PotPrim
+    EsqVel = PotPrim + PID;
+    DirVel = PotPrim;
   }
 }
 
@@ -199,14 +230,10 @@ mandar informações do módulo bluetooth HC-05
 até um aplicativo de celular*/
 void bluethooth (void)
 {
-/* 
-{
-  if (Serial2.avaliable() > 0)
   
  
 }
-*/
-} 
+
 //////////////////////////////////////////////////
 
 void Walk (void)
@@ -220,10 +247,9 @@ void Walk (void)
   
  
 
-  if(valors2 > linha && valors7 < linha)
+  if(valors2 > linha  && valors7 < linha)
   {
 
   }
 }
-
 
