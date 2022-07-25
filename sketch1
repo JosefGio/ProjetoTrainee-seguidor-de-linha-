@@ -4,7 +4,7 @@
 
 
 
-String inputString = ""; //string necessária para ler as informações no app pelo celular
+//String inputString = ""; //string necessária para ler as informações no app pelo celular
 
 
 int DirVel = 4 ;//Velocidade do motor direito
@@ -102,6 +102,7 @@ void loop (void)
   calculo_erro ();
   calculoPID ();
   controle_motor ();
+  timers1 (); 
   /* Walk (); */
   
   bluethooth();
