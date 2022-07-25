@@ -10,8 +10,9 @@ double ITerm, lastInput;
 double kp, ki, kd;
 int SampleTime = 1000; //1 sec
 double outMin, outMax;
-void Compute()
-{
+
+   void Compute()
+   {
    unsigned long now = millis();
    int timeChange = (now - lastTime);
    if(timeChange>=SampleTime)
