@@ -20,8 +20,14 @@ double outMin, outMax;
       /*Compute all the working error variables*/
       double error = Setpoint - Input;
       ITerm+= (ki * error);
-      if(ITerm> outMax) ITerm= outMax;
-      else if(ITerm< outMin) ITerm= outMin;
+      if(ITerm> outMax) 
+      {
+      ITerm= outMax;
+      }
+      else if(ITerm< outMin)
+      {
+      ITerm= outMin;
+      }
       double dInput = (Input - lastInput);
  
       /*Compute PID Output*/
