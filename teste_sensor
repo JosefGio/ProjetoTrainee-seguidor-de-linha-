@@ -1,0 +1,32 @@
+int s2 = A0;
+int s3 = A1;
+int s4 = A2;
+int s5 = A3;
+int s6 = A4;
+int s7 = A5; 
+
+int valors2 = 0 , valors3 = 0 , valors4 = 0 , valors5 = 0, valors6 = 0, valors7 = 0; 
+
+void setup ()
+{
+  Serial.begin (9600);  
+  
+}
+
+void loop()
+{
+  valors2 = analogRead(s2);
+  valors3 = analogRead(s3);
+  valors4 = analogRead(s4);
+  valors5 = analogRead(s5);
+  valors6 = analogRead(s6);
+  valors7 = analogRead(s7);
+  
+    Serial.print ("Valor do Sensor2: \n" );
+    Serial.print (valors2);
+  
+    
+
+
+
+    delay(250);
