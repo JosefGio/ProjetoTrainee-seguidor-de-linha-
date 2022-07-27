@@ -9,10 +9,15 @@
 
 //String inputString = ""; //string necessária para ler as informações no app pelo celular
 
-int DirVel = 4;  // Velocidade do motor direito
+/*int DirVel = ;  // Velocidade do motor direito
 int EsqVel = 7;  // Velocidade do motoe esquerdo
 int DirCont = 6; // Controle direito
-int EsqCont = 5; // Controle esquerdo
+int EsqCont = ; // Controle esquerdo*/
+
+#define In1 PD4 //direita
+#define In2 PD5 //direita
+#define In3 PD6 //esquerda
+#define In4 PD7 //esquerda
 
 int PotPrim = 255;   // Potência do motor principal da curva
 int PotSec = 125;     // Potênica do motor secundário durante a curva
@@ -50,6 +55,8 @@ unsigned int media_p;
 
 unsigned char flag_timer = 0; //flag pra ativar o contador 
 unsigned int MaxTimer1;
+int flag_curva = 0;
+int flag_
 
 
 int linha = 650; // valor de referência que indica se o sensoer está lendo a linha branca ou o tapete preto
@@ -106,9 +113,11 @@ void setup(void)
 
   // Motores
   pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT); // DDRB = 0b11110000
+  pinMode(5, OUTPUT); // DDRD = 0b11111110
   pinMode(6, OUTPUT);
   pinMode(7, OUTPUT);
+  pinMode(9 , OUTPUT);
+  pinMode(10, OUTPUT);
 
   // Sensores
   pinMode(A0, INPUT); //
@@ -200,7 +209,7 @@ if (media_p > 0)
 
 void timers1(void)
 {
-  static unsigned char contador1 = 0;
+  
   static unsigned char c_timer1 = 0;
   static unsigned char c_timer2 = 0;
   static unsigned char c_timer3 = 0;
@@ -226,35 +235,6 @@ void timers1(void)
     {
       f_timer2();
       c_timer2 = 0;
-    }
-
-  if (c_timer3 < 100)
-  {
-    c_timer3++;
-  }
-    else
-    {
-      f_timer3();
-      c_timer3 = 0;
-    }
-
-  if (c_timer4 < 50)
-  {
-    c_timer4++;
-  }
-    else
-    {
-      f_timer4();
-      c_timer4 = 0;
-    }
-  if (c_timer5 < 10)
-  {
-    c_timer5++;
-  }
-    else
-    {
-      f_timer5();
-      c_timer5 = 0;
     }
     
 }
