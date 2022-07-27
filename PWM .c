@@ -1,16 +1,4 @@
-#include <Arduino.h>
-#include <PWM.h>
-
-
-//PWM
-
-
-
-void setDuty_2 (int duty) //MotorEsquerdo
-{
-
-
-}#include "PWM.h"
+#include "PWM.h"
 
 void PWM_init(void)
 {
@@ -55,4 +43,3 @@ void pwm_set_duty_service(unsigned int duty, unsigned char channel)
   }
   OCR1B = duty; //registrador de PWM do OC1B
 }
-
