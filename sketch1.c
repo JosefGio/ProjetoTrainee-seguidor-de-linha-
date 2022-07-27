@@ -1,4 +1,4 @@
-#include <Arduino.h>
+##include <Arduino.h>
 //#include <SoftwareSerial.h>
 //#include "time.h"
 #include "uart.h"
@@ -6,8 +6,9 @@
 #include "ADC.h"
 #include <stdio.h>
 #include <util/delay.h>
+#include "PWM.h"
 
-//String inputString = ""; //string necessária para ler as informações no app pelo celular
+
 
 /*int DirVel = ;  // Velocidade do motor direito
 int EsqVel = 7;  // Velocidade do motoe esquerdo
@@ -40,7 +41,6 @@ int valors5 = 0;
 int valors6 = 0;
 int valors7 = 0;
 int valorsp = 0;
-int acionador = 0, crono = 0;
 
 // Variáveis Bluetooth
 int junk = 0;
@@ -50,19 +50,20 @@ float Kp =0.495, Ki =0.425, Kd =0.05; // constante de Proporcionalidade, Integra
 int P = 0, I = 0, D = 0, PID = 0;
 double Setpoint = 500;
 int erro = 0, erro_anterior = 0;
-char p2,p3,p4,p5,p6,p7;
+
 unsigned int media_p;
 
-unsigned char flag_timer = 0; //flag pra ativar o contador 
+//unsigned char flag_timer = 0; //flag pra ativar o contador 
 unsigned int MaxTimer1;
-int flag_curva = 0;
-int flag_
+
 
 
 int linha = 650; // valor de referência que indica se o sensoer está lendo a linha branca ou o tapete preto
 
 unsigned int sensores [6];
 char buffer [10];
+char tempo = 0;
+
 
 // Declaração de funções
 
@@ -99,9 +100,12 @@ int main()
   TCCR0B = 0x03; // defino o prescaler em 64
   TCNT0 = 6;     // começa em 6 e vai até 255 gerando um tempo de 1ms
   TIMSK0 = 0x01; // habilito a interrupção do timer0
-  uart_setup(16);//57600bps
+  uart_setup(103);//9600bps
+  PWM_init();
+  setup_pwm_setFreq(12);
+
   sei();         // habilita a chave geral das interrupções
-  //MaxTimer1 = 500;
+
   while(1)  loop();
 }
 
@@ -109,12 +113,9 @@ void setup(void)
 {
 
   // Motores
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT); // DDRD = 0b11111110
-  pinMode(6, OUTPUT);
-  pinMode(7, OUTPUT);
-  pinMode(9 , OUTPUT);
-  pinMode(10, OUTPUT);
+  
+  DDRD = 0b11110110;
+  
 
   // Sensores
   pinMode(A0, INPUT); //
@@ -133,6 +134,7 @@ void setup(void)
 
 void loop(void)
 {
+  //uart_string_sending_service();
 
   for (int i = 0; i < 6; i++)
   {
@@ -161,10 +163,13 @@ void loop(void)
 }
 
 void MP (void)
-{
+{ 
+ char p2= -2,p3=-1 ,p4= 0,p5= 0,p6= 1,p7= 2;
+
+
   for (int i ; i < 255; i++);
 {
-  media_p = ((valors2*p2 + valors3*p3 + valors4*p4 + valors5*p5 + valors6*p6 +valors7*p7));
+  media_p = ((valors2*p2 + valors3*p3 + valors4*p4 + valors5*p5 + valors6*p6 +valors7*p7)/(valors2 + valors3 + valors4 + valors5 + valors6 +valors7));
 }
 
 if (media_p > 0)
@@ -183,32 +188,28 @@ if (media_p > 0)
  analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
  digitalWrite(DirCont, LOW); //motor girando no sentido antihorário
  digitalWrite(EsqCont, LOW); //motor girando no sentido antihorário
-
  trás =
  analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
  analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
  digitalWrite(DirCont, HIGH); //motor girando no sentido horário
  digitalWrite(EsqCont, HIGH); //motor girando no sentido horário
-
  curva_direita =
  analogWrite(DirVel, 100);
  analogWrite(EsqVel, 100);
  digitalWrite(DirCont, HIGH);
  digitalWrite(EsqCont, LOW);
-
  curva_esquerda =
  analogWrite(DireVel, 100);
  analogWrite(EsqVel, 100);
  digitalWrite(DirCont, LOW);
  digitalWrite(EsqCont, HIGH);
-
 */
 
 void timers1(void)
 {
   
-  static unsigned char c_timer1 = 0;
-  static unsigned char c_timer2 = 0;
+  static unsigned int c_timer1 = 0;
+  static unsigned int c_timer2 = 0;
 
   if (c_timer1 < 500)
   {
@@ -231,6 +232,32 @@ void timers1(void)
       c_timer2 = 0;
     }
     
+}
+
+void f_timer1 (void)
+{
+  static char valor_parada = 0;
+
+  if(valorsp > linha)
+  {
+    valor_parada++;
+
+  }
+  else if (valorsp > linha && valor_parada > 8)
+  {
+    valor_parada = 0;
+    delay(200);
+
+    while(1)
+    break;
+
+  }
+
+}
+void f_timer2(void)
+{
+
+
 }
 
 
@@ -315,15 +342,16 @@ void calculoPID(void)
 
 void controle_motor(void)
 {
-  if (PID >= 0)
+  if (PID >= 255)
   {
-    PD4 = PotPrim;
-    PD6 = PotPrim - PID;
+    pwm_set_duty_service(PotPrim - PID, PWM_CHANNEL_1);
+    pwm_set_duty_service(PotPrim, PWM_CHANNEL_2) ;
   }
   else
   {
-    PD4 = PotPrim + PID;
-    PD6 = PotPrim;
+    pwm_set_duty_service(PotPrim , PWM_CHANNEL_1);
+    pwm_set_duty_service(PotPrim - PID , PWM_CHANNEL_2);
+
   }
 }
 
@@ -350,12 +378,8 @@ void bluethooth(void)
        {digitalWrite (8, OUTPUY)
    {
      inputString =" " //Limpa strig da Serial
-
-
    }
-
    }
-
   */
   //}
 }
@@ -412,7 +436,7 @@ void Walk(void)
   }
 }
 
-void parada(void)
+/*void parada(void)
 {
   if ((valorsp < linha) && (acionador == 0))
   {
@@ -433,9 +457,4 @@ void parada(void)
   }
   
 }
-
-void rotina (void)
-{
-  
-
-}
+*/
