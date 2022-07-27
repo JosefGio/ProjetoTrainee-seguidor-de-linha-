@@ -48,7 +48,7 @@ int junk = 0;
 // PID
 float Kp =0.495, Ki =0.425, Kd =0.05; // constante de Proporcionalidade, Integral e Diferencial
 int P = 0, I = 0, D = 0, PID = 0;
-double Setpoint = 500;
+double Setpoint = 0;
 int erro = 0, erro_anterior = 0;
 
 unsigned int media_p;
