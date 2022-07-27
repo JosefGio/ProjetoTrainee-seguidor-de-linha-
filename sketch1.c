@@ -70,9 +70,6 @@ void parada(void);
 void timers1(void);
 void f_timer1(void);
 void f_timer2(void);
-void f_timer3(void);
-void f_timer4(void);
-void f_timer5(void);
 void calculo_erro(void);
 void calculoPID(void);
 void controle_motor(void);
@@ -212,9 +209,6 @@ void timers1(void)
   
   static unsigned char c_timer1 = 0;
   static unsigned char c_timer2 = 0;
-  static unsigned char c_timer3 = 0;
-  static unsigned char c_timer4 = 0;
-  static unsigned char c_timer5 = 0;
 
   if (c_timer1 < 500)
   {
@@ -323,13 +317,13 @@ void controle_motor(void)
 {
   if (PID >= 0)
   {
-    EsqVel = PotPrim;
-    DirVel = PotPrim - PID;
+    PD4 = PotPrim;
+    PD6 = PotPrim - PID;
   }
   else
   {
-    EsqVel = PotPrim + PID;
-    DirVel = PotPrim;
+    PD4 = PotPrim + PID;
+    PD6 = PotPrim;
   }
 }
 
@@ -379,42 +373,42 @@ void Walk(void)
 
   if (valors2 > linha && valors7 > linha)
   {
-    analogWrite(DirVel, PotFrente); // velocidade mínima do motor equivale a 0
-    analogWrite(EsqVel, PotFrente); // velociade máxima do motor equivale a 255
-    digitalWrite(DirCont, LOW);     // motor girando no sentido antihorário
-    digitalWrite(EsqCont, LOW);     // motor girando no sentido antihorário
+    analogWrite(PD4, PotFrente); // velocidade mínima do motor equivale a 0
+    analogWrite(PD6, PotFrente); // velociade máxima do motor equivale a 255
+    digitalWrite(PD5, LOW);     // motor girando no sentido antihorário
+    digitalWrite(PD7, LOW);     // motor girando no sentido antihorário
   }
 
   else if (valors2 < linha && valors3 < linha)
   {
-    analogWrite(DirVel, PotSec);
-    analogWrite(EsqVel, PotFrente);
-    digitalWrite(DirCont, LOW);
-    digitalWrite(EsqCont, LOW);
+    analogWrite(PD4, PotSec);
+    analogWrite(PD6, PotFrente);
+    digitalWrite(PD5, LOW);
+    digitalWrite(PD6, LOW);
   }
 
   else if (valors2 > linha && valors3 > linha && valors4 < linha)
   {
-    analogWrite(DirVel, PotSec);
-    analogWrite(EsqVel, PotFrente);
-    digitalWrite(DirCont, LOW);
-    digitalWrite(EsqCont, LOW);
+    analogWrite(PD4, PotSec);
+    analogWrite(PD6, PotFrente);
+    digitalWrite(PD5, LOW);
+    digitalWrite(PD7, LOW);
   }
 
   else if (valors2 > linha && valors3 > linha && valors4 > linha && valors5 < linha)
   {
-    analogWrite(DirVel, PotSec);
-    analogWrite(EsqVel, PotFrente);
-    digitalWrite(DirCont, LOW);
-    digitalWrite(EsqCont, LOW);
+    analogWrite(PD4, PotSec);
+    analogWrite(PD6, PotFrente);
+    digitalWrite(PD5, LOW);
+    digitalWrite(PD7, LOW);
   }
 
   else if (valors2 > linha && valors3 > linha && valors4 > linha && valors5 > linha && valors6 < linha)
   {
-    analogWrite(DirVel, PotSec);
-    analogWrite(EsqVel, PotFrente);
-    digitalWrite(DirCont, LOW);
-    digitalWrite(EsqCont, LOW);
+    analogWrite(PD4, PotSec);
+    analogWrite(PD6, PotFrente);
+    digitalWrite(PD5, LOW);
+    digitalWrite(PD6, LOW);
   }
 }
 
@@ -432,10 +426,10 @@ void parada(void)
   }
   while (crono >= linha)
   {
-    digitalWrite (DirVel, 0);
-    digitalWrite (EsqVel, 0);
-    analogWrite (DirCont, LOW);
-    analogWrite (EsqCont, LOW);
+    digitalWrite (PD4, 0);
+    digitalWrite (PD6, 0);
+    analogWrite (PD5, LOW);
+    analogWrite (PD7, LOW);
   }
   
 }
