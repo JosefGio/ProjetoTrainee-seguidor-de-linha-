@@ -1,26 +1,31 @@
 #include <Arduino.h>
-#include <SoftwareSerial.h>
-#include "time.h"
+//#include <SoftwareSerial.h>
+//#include "time.h"
+#include "uart.h"
+#include <avr/interrupt.h>
+#include "ADC.h"
+#include <stdio.h>
+#include <util/delay.h>
 
-String inputString = ""; //string necessária para ler as informações no app pelo celular
+//String inputString = ""; //string necessária para ler as informações no app pelo celular
 
 int DirVel = 4;  // Velocidade do motor direito
-int EsqVel = 5;  // Velocidade do motoe esquerdo
+int EsqVel = 7;  // Velocidade do motoe esquerdo
 int DirCont = 6; // Controle direito
-int EsqCont = 7; // Controle esquerdo
+int EsqCont = 5; // Controle esquerdo
 
 int PotPrim = 255;   // Potência do motor principal da curva
 int PotSec = 125;     // Potênica do motor secundário durante a curva
 int PotFrente = 255; // Potência quando o robô estiver seguindo em frente
 
 // Sensores//
-int s2 = A0;
-int s3 = A1;
-int s4 = A2;
-int s5 = A3;
-int s6 = A4;
-int s7 = A5;
-int sp = 3;
+#define s2  A0
+#define s3  A1
+#define s4  A2
+#define s5  A3
+#define s6  A4
+#define s7  A5
+#define sp  3
 
 // Valor dos Sensores//
 int valors2 = 0;
@@ -30,6 +35,7 @@ int valors5 = 0;
 int valors6 = 0;
 int valors7 = 0;
 int valorsp = 0;
+int acionador = 0, crono = 0;
 
 // Variáveis Bluetooth
 int junk = 0;
@@ -38,44 +44,61 @@ int junk = 0;
 float Kp =0.495, Ki =0.425, Kd =0.05; // constante de Proporcionalidade, Integral e Diferencial
 int P = 0, I = 0, D = 0, PID = 0;
 double Setpoint = 500;
-
 int erro = 0, erro_anterior = 0;
+char p2,p3,p4,p5,p6,p7;
+unsigned int media_p;
 
 unsigned char flag_timer = 0; //flag pra ativar o contador 
 unsigned int MaxTimer1;
 
-unsigned int linha = 650; // valor de referência que indica se o sensoer está lendo a linha branca ou o tapete preto
 
-/*Flags//
-char f_parada = 0; //variável que controla quando o robô deverá parar sua rotina
-char flag = 
-char f_motor = 0
-char flag_curva = 0
-char flag_parada = 0
-char f_calibra = 0
+int linha = 650; // valor de referência que indica se o sensoer está lendo a linha branca ou o tapete preto
 
-*/
+unsigned int sensores [6];
+char buffer [10];
 
 // Declaração de funções
 
 void parada(void);
 void timers1(void);
+void f_timer1(void);
+void f_timer2(void);
+void f_timer3(void);
+void f_timer4(void);
+void f_timer5(void);
 void calculo_erro(void);
 void calculoPID(void);
 void controle_motor(void);
 void bluethooth(void);
 void Walk(void);
-void parada (void);
+void MP (void);
 
+ISR(ADC_vect)
+{
+  tratar_leitura_do_ADC();
+
+}
+
+ISR(TIMER0_OVF_vect)
+{
+  TCNT0 = 6;
+  timers1();
+}
 // SoftwareSerial(0 , 1) //entradas RX e TX
 
 int main()
 {
+  //setup();
+  DDRC = 0x00;
+  adc_setup();
+  tratar_leitura_do_ADC();
   TCCR0B = 0x03; // defino o prescaler em 64
   TCNT0 = 6;     // começa em 6 e vai até 255 gerando um tempo de 1ms
   TIMSK0 = 0x01; // habilito a interrupção do timer0
+  uart_setup(16);//57600bps
   sei();         // habilita a chave geral das interrupções
-  MaxTimer1 = 500;
+  //MaxTimer1 = 500;
+  while(1)  loop();
 }
 
 void setup(void)
@@ -96,7 +119,7 @@ void setup(void)
   pinMode(A5, INPUT);
   pinMode(3, INPUT); //
 
-  Serial.begin(9600); // Serial para Monitor Arduino para debug
+  //Serial.begin(9600); // Serial para Monitor Arduino para debug
   pinMode(0, INPUT);  // RX
   pinMode(1, INPUT);  // TX
   
@@ -104,17 +127,50 @@ void setup(void)
 
 void loop(void)
 {
+
+  for (int i = 0; i < 6; i++)
+  {
+    sensores[i] = AD_pins[i];
+  }
+  
+  
+  //calculo_erro();
+  //calculoPID();
+  //controle_motor();
+  //Walk(); 
+
+ //bluethooth();
+
+  //parada();
+
+  for (int i = 0; i < 6; i++)
+  {
+    sprintf(buffer, "%d\t", sensores[i]);
+    uart_string_sending_service(buffer);
+  }
+
+  uart_caractere_sending_service('\n');
+
+  _delay_ms(200);
+}
+
+void MP (void)
+{
+  for (int i ; i < 255; i++);
+{
+  media_p = ((valors2*p2 + valors3*p3 + valors4*p4 + valors5*p5 + valors6*p6 +valors7*p7));
+}
+
+if (media_p > 0)
+{
   calculo_erro();
   calculoPID();
   controle_motor();
-  timers1();
-  /* Walk (); */
 
-  bluethooth();
-
-  parada();
 }
 
+
+}
 /*
  frente =
  analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
@@ -142,77 +198,120 @@ void loop(void)
 
 */
 
-ISR(TIMER0_OVF_vect)
-{
-  TCNT0 = 6;
-  timers1();
-}
-
 void timers1(void)
 {
   static unsigned char contador1 = 0;
-  if (contador1 < 10)
+  static unsigned char c_timer1 = 0;
+  static unsigned char c_timer2 = 0;
+  static unsigned char c_timer3 = 0;
+  static unsigned char c_timer4 = 0;
+  static unsigned char c_timer5 = 0;
+
+  if (c_timer1 < 500)
   {
-    contador1++;
+    c_timer1++;
   }
 
-  if (contador1 > 10)
+    else
+    {
+      f_timer1();
+      c_timer1 = 0;
+    }
+
+  if (c_timer2 < 300)
   {
-    parada();
-    contador1 = 0;
+    c_timer2++;
   }
+    else
+    {
+      f_timer2();
+      c_timer2 = 0;
+    }
+
+  if (c_timer3 < 100)
+  {
+    c_timer3++;
+  }
+    else
+    {
+      f_timer3();
+      c_timer3 = 0;
+    }
+
+  if (c_timer4 < 50)
+  {
+    c_timer4++;
+  }
+    else
+    {
+      f_timer4();
+      c_timer4 = 0;
+    }
+  if (c_timer5 < 10)
+  {
+    c_timer5++;
+  }
+    else
+    {
+      f_timer5();
+      c_timer5 = 0;
+    }
+    
 }
+
+
 
 void calculo_erro(void)
 {
-  analogWrite(A0, 0);
-  analogWrite(A1, 0);
-  analogWrite(A3, 0);
-  analogWrite(A4, 0);
-  analogWrite(A5, 0);
-  analogWrite(A6, 0);
 
-  if ((s2 >= linha) && (s3 >= linha) && (s4 <= linha) && (s5 >= linha) && (s6 >= linha) && (s7 >= linha))
+  valors2 = analogRead(A0);
+  valors3 = analogRead(A1);
+  valors4 = analogRead(A2);
+  valors5 = analogRead(A3);
+  valors6 = analogRead(A4);
+  valors7 = analogRead(A5);
+
+  if ((valors2 >= linha) && (valors3 >= linha) && (valors4 <= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
   {
     erro = 0;
   }
-  else if ((s2 >= linha) && (s3 <= linha) && (s4 <= linha) && (s5 >= linha) && (s6 >= linha) && (s7 >= linha))
+  else if ((valors2 >= linha) && (valors3 <= linha) && (valors4 <= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
   {
     erro = 1;
   }
-  else if ((s2 >= linha) && (s3 >= linha) && (s4 <= linha) && (s5 <= linha) && (s6 >= linha) && (s7 >= linha))
+  else if ((valors2 >= linha) && (valors3 >= linha) && (valors4 <= linha) && (valors5 <= linha) && (valors6 >= linha) && (valors7 >= linha))
   {
     erro = -1;
   }
-  else if ((s2 >= linha) && (s3 >= linha) && (s4 >= linha) && (s5 <= linha) && (s6 >= linha) && (s7 >= linha))
+  else if ((valors2 >= linha) && (valors3 >= linha) && (valors4 >= linha) && (valors5 <= linha) && (valors6 >= linha) && (valors7 >= linha))
   {
     erro = 1.5;
   }
-  else if ((s2 >= linha) && (s3 <= linha) && (s4 >= linha) && (s5 >= linha) && (s6 >= linha) && (s7 >= linha))
+  else if ((valors2 >= linha) && (valors3 <= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
   {
     erro = -1.5;
   }
-  else if ((s2 >= linha) && (s3 >= linha) && (s4 >= linha) && (s5 <= linha) && (s6 <= linha) && (s7 >= linha))
+  else if ((valors2 >= linha) && (valors3 >= linha) && (valors4 >= linha) && (valors5 <= linha) && (valors6 <= linha) && (valors7 >= linha))
   {
     erro = 1.75;
   }
-  else if ((s2 <= linha) && (s3 <= linha) && (s4 >= linha) && (s5 >= linha) && (s6 >= linha) && (s7 >= linha))
+  else if ((valors2 <= linha) && (valors3 <= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
   {
     erro = -1.75;
   }
-  else if ((s2 <= linha) && (s3 <= linha) && (s4 >= linha) && (s5 >= linha) && (s6 >= linha) && (s7 >= linha))
+  else if ((valors2 <= linha) && (valors3 <= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
   {
     erro = 1.9;
   }
-  else if ((s2 <= linha) && (s3 <= linha) && (s4 >= linha) && (s5 >= linha) && (s6 >= linha) && (s7 <= linha))
+  else if ((valors2 <= linha) && (valors3 <= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 <= linha))
   {
     erro = -1.9;
   }
-  else if ((s2 >= linha) && (s3 >= linha) && (s4 >= linha) && (s5 >= linha) && (s6 <= linha) && (s7 <= linha))
+  else if ((valors2 >= linha) && (valors3 >= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 <= linha) && (valors7 <= linha))
   {
     erro = 2;
   }
-  else if ((s2 <= linha) && (s3 >= linha) && (s4 >= linha) && (s5 >= linha) && (s6 >= linha) && (s7 >= linha))
+  else if ((valors2 <= linha) && (valors3 >= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
   {
     erro = -2;
   }
@@ -259,18 +358,18 @@ mandar informações do módulo bluetooth HC-05
 até um aplicativo de celular*/
 void bluethooth(void)
 {
-  if (Serial.available())
-  {
-    while (Serial.available())
-    {
-      char inChar = (char)Serial.read(); // lê a serial
-      inputString += inChar;             // monta a string
-    }
-    Serial.println(inputString);
-    while (Serial.available() > 0)
-    {
-      junk = Serial.read(); // limpa buffer da serial
-    }
+  //if (Serial.available())
+  //{
+   // while (Serial.available())
+   // {
+      //char inChar = (char)Serial.read(); // lê a serial
+      //inputString += inChar;             // monta a string
+   // }
+    //Serial.println(inputString);
+   // while (Serial.available() > 0)
+   // {
+     // junk = Serial.read(); // limpa buffer da serial
+    //}
     /* if (inputString = "a")
    { digitalWrite(11, HIGH);}
        else if (inputString =="b")
@@ -284,7 +383,7 @@ void bluethooth(void)
    }
 
   */
-  }
+  //}
 }
 
 //////////////////////////////////////////////////
@@ -341,9 +440,28 @@ void Walk(void)
 
 void parada(void)
 {
-  if (valorsp > linha)
+  if ((valorsp < linha) && (acionador == 0))
   {
-    analogWrite(DirVel, 0); // velocidade mínima do motor equivale a 0
-    analogWrite(EsqVel, 0);
+    crono++;
+    acionador = 1;
+
   }
+  if ((valorsp > linha) && (acionador = 1))
+  {
+    acionador = 0;
+  }
+  while (crono >= linha)
+  {
+    digitalWrite (DirVel, 0);
+    digitalWrite (EsqVel, 0);
+    analogWrite (DirCont, LOW);
+    analogWrite (EsqCont, LOW);
+  }
+  
+}
+
+void rotina (void)
+{
+  
+
 }
