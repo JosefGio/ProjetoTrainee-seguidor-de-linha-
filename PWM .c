@@ -4,18 +4,10 @@
 
 //PWM
 
-extern unsigned int PWM1, PWM2;
 
-void setDuty_2(int duty) //MotorDireito
-{
-    OCR1A = duty; 
-
-}
 
 void setDuty_2 (int duty) //MotorEsquerdo
 {
-
-    OCR18 = dut; //registrador de PWM 
 
 
 }#include "PWM.h"
