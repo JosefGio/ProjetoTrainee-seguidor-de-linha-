@@ -1,6 +1,4 @@
-##include <Arduino.h>
-//#include <SoftwareSerial.h>
-//#include "time.h"
+#include<Arduino.h>
 #include "uart.h"
 #include <avr/interrupt.h>
 #include "ADC.h"
@@ -8,63 +6,64 @@
 #include <util/delay.h>
 #include "PWM.h"
 
+#define set_bit(reg, bit) (reg|= (1 << bit))
+#define clear_bit(reg, bit) (reg &= ~(1 << bit))
+#define test_bit(reg,bit)  (reg & (1<<bit)) 
 
+#define In1 PB5 //13
+#define In2 PB4 //14  
+#define In3 PD7 //7  
+#define In4 PD6 //6 
+#define ENA PB2 //10 
+#define ENB PB1 //9 
 
-/*int DirVel = ;  // Velocidade do motor direito
-int EsqVel = 7;  // Velocidade do motoe esquerdo
-int DirCont = 6; // Controle direito
-int EsqCont = ; // Controle esquerdo*/
-
-#define In1 PD4 //direita
+/*#define In1 PD4 //direita
 #define In2 PD5 //direita
 #define In3 PD6 //esquerda
-#define In4 PD7 //esquerda
+#define In4 PD7 //esquerda*/
 
-int PotPrim = 255;   // Potência do motor principal da curva
-int PotSec = 125;     // Potênica do motor secundário durante a curva
-int PotFrente = 255; // Potência quando o robô estiver seguindo em frente
+int PotPrim = 510; // Potência do motor principal da curva
+int PotSec = 125;      // Potênica do motor secundário durante a curva
+int PotFrente = 255;   // Potência quando o robô estiver seguindo em frente
 
 // Sensores//
-#define s2  A0
-#define s3  A1
-#define s4  A2
-#define s5  A3
-#define s6  A4
-#define s7  A5
-#define sp  3
+#define s2 A0
+#define s3 A1
+#define s4 A2
+#define s5 A3
+#define s6 A4
+#define s7 A5
+#define sp 3
 
-// Valor dos Sensores//
+/* Valor dos Sensores
 int valors2 = 0;
 int valors3 = 0;
 int valors4 = 0;
 int valors5 = 0;
 int valors6 = 0;
-int valors7 = 0;
-int valorsp = 0;
-
-// Variáveis Bluetooth
-int junk = 0;
+int valors7 = 0; */
+//valor do Sensor lateral
+int valorsp = 0; 
 
 // PID
-float Kp =0.495, Ki =0.425, Kd =0.05; // constante de Proporcionalidade, Integral e Diferencial
+float Kp = 0.6, Ki = 0.0, Kd = 0.0; // constante de Proporcionalidade, Integral e Diferencial
 int P = 0, I = 0, D = 0, PID = 0;
 double Setpoint = 0;
 int erro = 0, erro_anterior = 0;
 
-unsigned int media_p;
+signed int media_p;
+int valor_max = 244;
+int valor_min = 203;
 
-//unsigned char flag_timer = 0; //flag pra ativar o contador 
-unsigned int MaxTimer1;
+char valor_parada = 0;
+char flag_stop = 0;
 
 
-
-int linha = 650; // valor de referência que indica se o sensoer está lendo a linha branca ou o tapete preto
-
-unsigned int sensores [6];
-char buffer [10];
+unsigned char sensores[6];
+char buffer[10];
 char tempo = 0;
-
-
+int PWM_esquerdo; // Potprim-pid
+int PWM_direito;      //Potprim+pid
 // Declaração de funções
 
 void parada(void);
@@ -72,16 +71,14 @@ void timers1(void);
 void f_timer1(void);
 void f_timer2(void);
 void calculo_erro(void);
-void calculoPID(void);
+void calculoPID(int erro);
 void controle_motor(void);
-void bluethooth(void);
-void Walk(void);
-void MP (void);
+void MP(void);
+void leitura_sensores(void);
 
 ISR(ADC_vect)
 {
   tratar_leitura_do_ADC();
-
 }
 
 ISR(TIMER0_OVF_vect)
@@ -89,372 +86,188 @@ ISR(TIMER0_OVF_vect)
   TCNT0 = 6;
   timers1();
 }
-// SoftwareSerial(0 , 1) //entradas RX e TX
 
 int main()
 {
-  //setup();
-  DDRC = 0x00;
+  setup();
+  
   adc_setup();
   tratar_leitura_do_ADC();
-  TCCR0B = 0x03; // defino o prescaler em 64
-  TCNT0 = 6;     // começa em 6 e vai até 255 gerando um tempo de 1ms
-  TIMSK0 = 0x01; // habilito a interrupção do timer0
-  uart_setup(103);//9600bps
+  TCCR0B = 0x03;   // defino o prescaler em 64
+  TCNT0 = 6;       // começa em 6 e vai até 255 gerando um tempo de 1ms
+  TIMSK0 = 0x01;   // habilito a interrupção do timer0
+  uart_setup(103); // 9600bps
   PWM_init();
   setup_pwm_setFreq(12);
 
-  sei();         // habilita a chave geral das interrupções
+  sei(); // habilita a chave geral das interrupções
 
-  while(1)  loop();
+  while (1)
+    loop();
 }
 
 void setup(void)
 {
-
   // Motores
-  
   DDRD = 0b11110110;
-  
-
+  DDRB = 0b11111111; //Saídas 4,5,6,7 para motores, 1 para TX ; Entrada 3 para sensor lateral e Entrada 0 para RX 
   // Sensores
-  pinMode(A0, INPUT); //
-  pinMode(A1, INPUT);
-  pinMode(A2, INPUT);
-  pinMode(A3, INPUT); // input dos 6 sensores frontais + sensor lateral
-  pinMode(A4, INPUT);
-  pinMode(A5, INPUT);
-  pinMode(3, INPUT); //
+  DDRC  = 0x00;
 
-  //Serial.begin(9600); // Serial para Monitor Arduino para debug
-  pinMode(0, INPUT);  // RX
-  pinMode(1, INPUT);  // TX
-  
 }
 
 void loop(void)
 {
-  //uart_string_sending_service();
+ 
 
-  for (int i = 0; i < 6; i++)
+  if(!flag_stop)
   {
-    sensores[i] = AD_pins[i];
+    
+    parada();
   }
-  
-  
-  //calculo_erro();
-  //calculoPID();
-  //controle_motor();
-  //Walk(); 
+}
 
- //bluethooth();
 
-  //parada();
+void MP(void)
+{
+  leitura_sensores();
 
-  for (int i = 0; i < 6; i++)
+  int p2 = -3000, p3 = -2000, p4 = -1000, p5 = 1000, p6 = 2000, p7 = 3000;
+
+  static int denominador = 0;
+  for(int i = 0; i < 6; i++)
+  {
+    denominador += sensores[i];
+  }
+
+  if(!denominador)  media_p = 0;
+
+  else
+  {
+    media_p = (((sensores[0] * p2) + (sensores[1] * p3) + (sensores[2] * p4) + (sensores[3] * p5) + (sensores[4] * p6) + (sensores[5] * p7)) / denominador);
+  }
+
+  for(int i = 0; i < 6; i++)
   {
     sprintf(buffer, "%d\t", sensores[i]);
     uart_string_sending_service(buffer);
   }
-
-  uart_caractere_sending_service('\n');
-
-  _delay_ms(200);
-}
-
-void MP (void)
-{ 
- char p2= -2,p3=-1 ,p4= 0,p5= 0,p6= 1,p7= 2;
-
-
-  for (int i ; i < 255; i++);
-{
-  media_p = ((valors2*p2 + valors3*p3 + valors4*p4 + valors5*p5 + valors6*p6 +valors7*p7)/(valors2 + valors3 + valors4 + valors5 + valors6 +valors7));
-}
-
-if (media_p > 0)
-{
+  sprintf(buffer, "%d\n", media_p);
+  uart_string_sending_service(buffer);
   calculo_erro();
-  calculoPID();
+
   controle_motor();
-
 }
 
-
-}
-/*
- frente =
- analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
- analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
- digitalWrite(DirCont, LOW); //motor girando no sentido antihorário
- digitalWrite(EsqCont, LOW); //motor girando no sentido antihorário
- trás =
- analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
- analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
- digitalWrite(DirCont, HIGH); //motor girando no sentido horário
- digitalWrite(EsqCont, HIGH); //motor girando no sentido horário
- curva_direita =
- analogWrite(DirVel, 100);
- analogWrite(EsqVel, 100);
- digitalWrite(DirCont, HIGH);
- digitalWrite(EsqCont, LOW);
- curva_esquerda =
- analogWrite(DireVel, 100);
- analogWrite(EsqVel, 100);
- digitalWrite(DirCont, LOW);
- digitalWrite(EsqCont, HIGH);
-*/
 
 void timers1(void)
 {
-  
-  static unsigned int c_timer1 = 0;
-  static unsigned int c_timer2 = 0;
 
-  if (c_timer1 < 500)
+  static unsigned int c_timer1 = 0;
+ 
+
+  if (c_timer1 < 10)
   {
     c_timer1++;
   }
 
-    else
-    {
-      f_timer1();
-      c_timer1 = 0;
-    }
-
-  if (c_timer2 < 300)
+  else
   {
-    c_timer2++;
+    f_timer1();
+    c_timer1 = 0;
   }
-    else
-    {
-      f_timer2();
-      c_timer2 = 0;
-    }
-    
+
 }
 
-void f_timer1 (void)
+void f_timer1(void)
 {
-  static char valor_parada = 0;
-
-  if(valorsp > linha)
-  {
-    valor_parada++;
-
-  }
-  else if (valorsp > linha && valor_parada > 8)
-  {
-    valor_parada = 0;
-    delay(200);
-
-    while(1)
-    break;
-
-  }
-
+  MP();
 }
-void f_timer2(void)
-{
-
-
-}
-
-
 
 void calculo_erro(void)
 {
 
-  valors2 = analogRead(A0);
-  valors3 = analogRead(A1);
-  valors4 = analogRead(A2);
-  valors5 = analogRead(A3);
-  valors6 = analogRead(A4);
-  valors7 = analogRead(A5);
+  erro = Setpoint - media_p;
 
-  if ((valors2 >= linha) && (valors3 >= linha) && (valors4 <= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
-  {
-    erro = 0;
-  }
-  else if ((valors2 >= linha) && (valors3 <= linha) && (valors4 <= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
-  {
-    erro = 1;
-  }
-  else if ((valors2 >= linha) && (valors3 >= linha) && (valors4 <= linha) && (valors5 <= linha) && (valors6 >= linha) && (valors7 >= linha))
-  {
-    erro = -1;
-  }
-  else if ((valors2 >= linha) && (valors3 >= linha) && (valors4 >= linha) && (valors5 <= linha) && (valors6 >= linha) && (valors7 >= linha))
-  {
-    erro = 1.5;
-  }
-  else if ((valors2 >= linha) && (valors3 <= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
-  {
-    erro = -1.5;
-  }
-  else if ((valors2 >= linha) && (valors3 >= linha) && (valors4 >= linha) && (valors5 <= linha) && (valors6 <= linha) && (valors7 >= linha))
-  {
-    erro = 1.75;
-  }
-  else if ((valors2 <= linha) && (valors3 <= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
-  {
-    erro = -1.75;
-  }
-  else if ((valors2 <= linha) && (valors3 <= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
-  {
-    erro = 1.9;
-  }
-  else if ((valors2 <= linha) && (valors3 <= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 <= linha))
-  {
-    erro = -1.9;
-  }
-  else if ((valors2 >= linha) && (valors3 >= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 <= linha) && (valors7 <= linha))
-  {
-    erro = 2;
-  }
-  else if ((valors2 <= linha) && (valors3 >= linha) && (valors4 >= linha) && (valors5 >= linha) && (valors6 >= linha) && (valors7 >= linha))
-  {
-    erro = -2;
-  }
+  calculoPID(erro);
+
+ 
 }
-void calculoPID(void)
+void calculoPID(int erro)
 {
-  if (erro == 0)
-  {
-    I = 0;
-  }
-
   P = erro;  // Proporcional
   I += erro; // Integral
 
-  if (I > 255)
-  {
-    I = 255;
-  }
-  else if (I < -255)
-  {
-    I = -255;
-  }
-
   D = erro - erro_anterior;
+  erro_anterior = erro;
   PID = (Kp * P) + (Ki * I) + (Kd * D);
 }
 
 void controle_motor(void)
 {
-  if (PID >= 255)
-  {
-    pwm_set_duty_service(PotPrim - PID, PWM_CHANNEL_1);
-    pwm_set_duty_service(PotPrim, PWM_CHANNEL_2) ;
-  }
-  else
-  {
-    pwm_set_duty_service(PotPrim , PWM_CHANNEL_1);
-    pwm_set_duty_service(PotPrim - PID , PWM_CHANNEL_2);
 
-  }
+  PWM_esquerdo = PotPrim - PID;
+  PWM_direito = PotPrim + PID;
+
+  set_bit(PORTB, PB5);
+  clear_bit(PORTB, PB4);
+  set_bit(PORTD, PD6);
+  clear_bit(PORTD, PD7);
+
+if (PWM_esquerdo < 0)
+  {
+    set_bit(PORTB, PB5);
+    clear_bit(PORTB, PB4);
+    clear_bit(PORTD, PD6);
+    set_bit(PORTD, PD7);
 }
+  else if (PWM_direito < 0)
+  {
+    clear_bit(PORTB, PB5);
+    set_bit(PORTB, PB4);
+    set_bit(PORTD, PD6);
+    clear_bit(PORTD, PD7);
+  }
+  pwm_set_duty_service(PotPrim - PID, PWM_CHANNEL_1);
+  pwm_set_duty_service(PotPrim + PID, PWM_CHANNEL_2);
 
-/*Protótipo do código que será utilizado para
-mandar informações do módulo bluetooth HC-05
-até um aplicativo de celular*/
-void bluethooth(void)
+}
+void leitura_sensores(void)
 {
-  //if (Serial.available())
-  //{
-   // while (Serial.available())
-   // {
-      //char inChar = (char)Serial.read(); // lê a serial
-      //inputString += inChar;             // monta a string
-   // }
-    //Serial.println(inputString);
-   // while (Serial.available() > 0)
-   // {
-     // junk = Serial.read(); // limpa buffer da serial
-    //}
-    /* if (inputString = "a")
-   { digitalWrite(11, HIGH);}
-       else if (inputString =="b")
-       {digitalWrite (8, OUTPUY)
-   {
-     inputString =" " //Limpa strig da Serial
-   }
-   }
-  */
-  //}
+  for(int i = 0; i < 6; i++)
+  {
+    if(AD_pins[i] > valor_max)
+    {
+      sensores[i] = valor_max;
+    }
+
+    else if (AD_pins[i] < valor_min)
+    {
+      sensores[i] = valor_min;
+    }
+    else
+    {
+      sensores[i] = AD_pins[i];
+    }
+  }
 }
 
-//////////////////////////////////////////////////
-
-void Walk(void)
+void parada (void)
 {
-  valors2 = analogRead(A0);
-  valors3 = analogRead(A1);
-  valors4 = analogRead(A2);
-  valors5 = analogRead(A3);
-  valors6 = analogRead(A4);
-  valors7 = analogRead(A5);
 
-  if (valors2 > linha && valors7 > linha)
+  if (valorsp < valor_max)
   {
-    analogWrite(PD4, PotFrente); // velocidade mínima do motor equivale a 0
-    analogWrite(PD6, PotFrente); // velociade máxima do motor equivale a 255
-    digitalWrite(PD5, LOW);     // motor girando no sentido antihorário
-    digitalWrite(PD7, LOW);     // motor girando no sentido antihorário
+    valor_parada++;
   }
-
-  else if (valors2 < linha && valors3 < linha)
+  else if (valorsp < valor_max && valor_parada >= 8)
   {
-    analogWrite(PD4, PotSec);
-    analogWrite(PD6, PotFrente);
-    digitalWrite(PD5, LOW);
-    digitalWrite(PD6, LOW);
-  }
-
-  else if (valors2 > linha && valors3 > linha && valors4 < linha)
-  {
-    analogWrite(PD4, PotSec);
-    analogWrite(PD6, PotFrente);
-    digitalWrite(PD5, LOW);
-    digitalWrite(PD7, LOW);
-  }
-
-  else if (valors2 > linha && valors3 > linha && valors4 > linha && valors5 < linha)
-  {
-    analogWrite(PD4, PotSec);
-    analogWrite(PD6, PotFrente);
-    digitalWrite(PD5, LOW);
-    digitalWrite(PD7, LOW);
-  }
-
-  else if (valors2 > linha && valors3 > linha && valors4 > linha && valors5 > linha && valors6 < linha)
-  {
-    analogWrite(PD4, PotSec);
-    analogWrite(PD6, PotFrente);
-    digitalWrite(PD5, LOW);
-    digitalWrite(PD6, LOW);
+    valor_parada = 0;
+    delay(200);
+    flag_stop = 1;
   }
 }
 
-/*void parada(void)
-{
-  if ((valorsp < linha) && (acionador == 0))
-  {
-    crono++;
-    acionador = 1;
 
-  }
-  if ((valorsp > linha) && (acionador = 1))
-  {
-    acionador = 0;
-  }
-  while (crono >= linha)
-  {
-    digitalWrite (PD4, 0);
-    digitalWrite (PD6, 0);
-    analogWrite (PD5, LOW);
-    analogWrite (PD7, LOW);
-  }
-  
-}
-*/
+
+
+// https://replit.com/ //
