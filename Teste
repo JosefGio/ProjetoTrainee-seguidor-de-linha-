@@ -1,0 +1,30 @@
+
+//Motor//
+
+/*
+ frente =
+ analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
+ analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
+ digitalWrite(DirCont, LOW); //motor girando no sentido antihorário
+ digitalWrite(EsqCont, LOW); //motor girando no sentido antihorário
+
+ trás =
+ analogWrite(DirVel, PotFrente); //velocidade mínima do motor equivale a 0
+ analogWrite(EsqVel, PotFrente); //velociade máxima do motor equivale a 255
+ digitalWrite(DirCont, HIGH); //motor girando no sentido horário
+ digitalWrite(EsqCont, HIGH); //motor girando no sentido horário
+
+ curva_direita =
+ analogWrite(DirVel, 100);
+ analogWrite(EsqVel, 100);
+ digitalWrite(DirCont, HIGH);
+ digitalWrite(EsqCont, LOW);
+
+ curva_esquerda =
+ analogWrite(DireVel, 100);
+ analogWrite(EsqVel, 100);
+ digitalWrite(DirCont, LOW);
+ digitalWrite(EsqCont, HIGH);
+
+*/
+
