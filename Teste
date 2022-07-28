@@ -28,3 +28,25 @@
 
 */
 
+/*void parada(void)
+{
+  if ((valorsp < linha) && (acionador == 0))
+  {
+    crono++;
+    acionador = 1;
+
+  }
+  if ((valorsp > linha) && (acionador = 1))
+  {
+    acionador = 0;
+  }
+  while (crono >= linha)
+  {
+    digitalWrite (PD4, 0);
+    digitalWrite (PD6, 0);
+    analogWrite (PD5, LOW);
+    analogWrite (PD7, LOW);
+  }
+
+}
+*/
