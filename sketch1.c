@@ -1,4 +1,4 @@
-#include<Arduino.h>
+#include <Arduino.h>
 #include "uart.h"
 #include <avr/interrupt.h>
 #include "ADC.h"
@@ -11,37 +11,27 @@
 #define test_bit(reg,bit)  (reg & (1<<bit)) 
 
 #define In1 PB5 //13
-#define In2 PB4 //14  
+#define In2 PB4 //12  
 #define In3 PD7 //7  
 #define In4 PD6 //6 
 #define ENA PB2 //10 
 #define ENB PB1 //9 
 
-/*#define In1 PD4 //direita
-#define In2 PD5 //direita
-#define In3 PD6 //esquerda
-#define In4 PD7 //esquerda*/
 
 int PotPrim = 510; // Potência do motor principal da curva
 int PotSec = 125;      // Potênica do motor secundário durante a curva
 int PotFrente = 255;   // Potência quando o robô estiver seguindo em frente
 
 // Sensores//
-#define s2 A0
-#define s3 A1
-#define s4 A2
-#define s5 A3
-#define s6 A4
-#define s7 A5
-#define sp 3
+#define s2 PC0
+#define s3 PC1
+#define s4 PC2
+#define s5 PC3
+#define s6 PC4
+#define s7 PC5
+#define sp PD3
 
-/* Valor dos Sensores
-int valors2 = 0;
-int valors3 = 0;
-int valors4 = 0;
-int valors5 = 0;
-int valors6 = 0;
-int valors7 = 0; */
+
 //valor do Sensor lateral
 int valorsp = 0; 
 
@@ -135,16 +125,22 @@ void MP(void)
   int p2 = -3000, p3 = -2000, p4 = -1000, p5 = 1000, p6 = 2000, p7 = 3000;
 
   static int denominador = 0;
+  static int numerador = 0;
+
   for(int i = 0; i < 6; i++)
   {
     denominador += sensores[i];
   }
-
+  for (int i = 0; i < 6; i++)
+  {
+    numerador = ((sensores[0] * p2) + (sensores[1] * p3) + (sensores[2] * p4) + (sensores[3] * p5) + (sensores[4] * p6) + (sensores[5] * p7));
+  }
+  
   if(!denominador)  media_p = 0;
 
   else
   {
-    media_p = (((sensores[0] * p2) + (sensores[1] * p3) + (sensores[2] * p4) + (sensores[3] * p5) + (sensores[4] * p6) + (sensores[5] * p7)) / denominador);
+    media_p =  ((numerador)/ (denominador));
   }
 
   for(int i = 0; i < 6; i++)
@@ -254,12 +250,13 @@ void leitura_sensores(void)
 
 void parada (void)
 {
+  digitalRead (PD3);
 
   if (valorsp < valor_max)
   {
     valor_parada++;
   }
-  else if (valorsp < valor_max && valor_parada >= 8)
+  else if (sensores[PD3] < valor_max && valor_parada >= 8)
   {
     valor_parada = 0;
     delay(200);
